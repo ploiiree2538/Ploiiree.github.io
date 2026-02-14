@@ -2,52 +2,144 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>ระบบสรุปบิล</title>
+<title>ระบบบันทึกบิล</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <style>
-body{font-family:sans-serif;padding:20px;}
-textarea{width:100%;height:200px;}
-button{padding:10px 20px;margin-top:10px;}
-.result{margin-top:20px;background:#f4f4f4;padding:15px;}
+body{font-family:sans-serif;padding:20px}
+input{padding:5px;margin:5px}
+button{padding:6px 10px;margin:3px}
+table{border-collapse:collapse;margin-top:20px}
+td,th{border:1px solid #ccc;padding:5px;text-align:center}
 </style>
 </head>
 <body>
 
-<h2>ระบบสรุปบิลลูกค้า</h2>
+<h2>เพิ่มบิล</h2>
 
-<p>ใส่ข้อมูลแบบนี้:</p>
-<pre>
-863 3ตรง 100
-863 3ตรง 74
-863 โต๊ด 50
-63 2บน 2500
-</pre>
+<input id="numberInput" placeholder="ใส่เลข แล้วกด Enter">
 
-<textarea id="input"></textarea>
-<br>
-<button onclick="calculate()">สรุปผล</button>
+<div id="priceFields"></div>
 
-<div class="result" id="output"></div>
+<button onclick="exportExcel()">Export Excel</button>
+
+<h3>รายการทั้งหมด</h3>
+<table id="dataTable">
+<tr>
+<th>เลข</th>
+<th>ประเภท</th>
+<th>ยอดซื้อ</th>
+</tr>
+</table>
+
+<h3>สรุปยอด</h3>
+<div id="summary"></div>
 
 <script>
-function calculate(){
-let text=document.getElementById("input").value.trim().split("\n");
-let summary={};
+let data = [];
 
-text.forEach(line=>{
-let parts=line.split(" ");
-if(parts.length<3)return;
-let key=parts[0]+" "+parts[1];
-let amount=parseInt(parts[2]);
-if(!summary[key])summary[key]=0;
-summary[key]+=amount;
+document.getElementById("numberInput").addEventListener("keydown", function(e){
+if(e.key === "Enter"){
+generateFields(this.value);
+}
 });
 
-let result="";
-for(let key in summary){
-result+=key+" รวมยอดซื้อ "+summary[key]+" บาท<br>";
+function generateFields(number){
+let container = document.getElementById("priceFields");
+container.innerHTML = "";
+if(number.length == 3){
+createField(number,"3 ตัวตรง");
+createField(number,"3 ตัวโต๊ด");
+createField(number,"3 ตัวล่าง");
+
+createButton("3 กลับ",()=>back3(number));
+createButton("6 กลับ",()=>back6(number));
+createButton("วิ่งบน",()=>runTop(number));
+createButton("วิ่งล่าง",()=>runBottom(number));
+
+}else if(number.length == 2){
+createField(number,"2 ตัวบน");
+createField(number,"2 ตัวล่าง");
+}
 }
 
-document.getElementById("output").innerHTML=result;
+function createField(number,type){
+let input = document.createElement("input");
+input.placeholder = type;
+input.type="number";
+input.addEventListener("keydown",function(e){
+if(e.key==="Enter"){
+addData(number,type,this.value);
+this.value="";
+}
+});
+document.getElementById("priceFields").appendChild(input);
+}
+
+function createButton(text,action){
+let btn=document.createElement("button");
+btn.innerText=text;
+btn.onclick=action;
+document.getElementById("priceFields").appendChild(btn);
+}
+
+function addData(number,type,price){
+if(price==""||price<=0)return;
+data.push({number,type,price:parseFloat(price)});
+updateTable();
+updateSummary();
+}
+
+function updateTable(){
+let table=document.getElementById("dataTable");
+table.innerHTML="<tr><th>เลข</th><th>ประเภท</th><th>ยอดซื้อ</th></tr>";
+data.forEach(d=>{
+table.innerHTML+=`<tr><td>${d.number}</td><td>${d.type}</td><td>${d.price}</td></tr>`;
+});
+}
+
+function updateSummary(){
+let summary={};
+data.forEach(d=>{
+let key=d.number+" "+d.type;
+if(!summary[key]) summary[key]=0;
+summary[key]+=d.price;
+});
+let html="";
+for(let k in summary){
+html+=`${k} รวมยอดซื้อ ${summary[k]} บาท<br>`;
+}
+document.getElementById("summary").innerHTML=html;
+}
+
+function exportExcel(){
+let ws = XLSX.utils.json_to_sheet(data);
+let wb = XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+XLSX.writeFile(wb, "สรุปบิล.xlsx");
+}
+
+/* ฟังก์ชันปุ่มพิเศษ */
+function back3(num){
+let perms = [num[1]+num[0]+num[2],num[2]+num[1]+num[0]];
+perms.forEach(n=>addData(n,"3 กลับ",0));
+}
+function back6(num){
+let arr=num.split("");
+let perms=[];
+for(let i=0;i<6;i++){
+perms.push(arr.sort(()=>0.5-Math.random()).join(""));
+}
+perms.forEach(n=>addData(n,"6 กลับ",0));
+}
+function runTop(num){
+for(let i=0;i<=9;i++){
+addData(i+num[1],"วิ่งบน",0);
+}
+}
+function runBottom(num){
+for(let i=0;i<=9;i++){
+addData(num[0]+i,"วิ่งล่าง",0);
+}
 }
 </script>
 
