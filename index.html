@@ -2,26 +2,30 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>ระบบบันทึกบิล</title>
+<title>ระบบจดบิลหวย</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <style>
 body{font-family:sans-serif;padding:20px}
-input{padding:5px;margin:5px}
+input{padding:8px;margin:5px;display:block;width:200px}
 button{padding:6px 10px;margin:3px}
 table{border-collapse:collapse;margin-top:20px}
 td,th{border:1px solid #ccc;padding:5px;text-align:center}
+.section{margin-top:20px}
 </style>
 </head>
 <body>
 
-<h2>เพิ่มบิล</h2>
+<h2>ระบบจดบิลหวย</h2>
 
 <input id="numberInput" placeholder="ใส่เลข แล้วกด Enter">
 
 <div id="priceFields"></div>
 
+<div class="section">
 <button onclick="exportExcel()">Export Excel</button>
+</div>
 
+<div class="section">
 <h3>รายการทั้งหมด</h3>
 <table id="dataTable">
 <tr>
@@ -30,117 +34,159 @@ td,th{border:1px solid #ccc;padding:5px;text-align:center}
 <th>ยอดซื้อ</th>
 </tr>
 </table>
+</div>
 
+<div class="section">
 <h3>สรุปยอด</h3>
 <div id="summary"></div>
+</div>
 
 <script>
-let data = [];
 
-document.getElementById("numberInput").addEventListener("keydown", function(e){
+let data = []
+
+let numberInput = document.getElementById("numberInput")
+
+numberInput.addEventListener("keyup", function(e){
 if(e.key === "Enter"){
-generateFields(this.value);
+generateFields(this.value.trim())
 }
-});
+})
 
 function generateFields(number){
-let container = document.getElementById("priceFields");
-container.innerHTML = "";
-if(number.length == 3){
-createField(number,"3 ตัวตรง");
-createField(number,"3 ตัวโต๊ด");
-createField(number,"3 ตัวล่าง");
 
-createButton("3 กลับ",()=>back3(number));
-createButton("6 กลับ",()=>back6(number));
-createButton("วิ่งบน",()=>runTop(number));
-createButton("วิ่งล่าง",()=>runBottom(number));
-
-}else if(number.length == 2){
-createField(number,"2 ตัวบน");
-createField(number,"2 ตัวล่าง");
+if(number.length !== 2 && number.length !== 3){
+alert("ใส่เลข 2 หรือ 3 ตัวเท่านั้น")
+return
 }
+
+let container = document.getElementById("priceFields")
+container.innerHTML = ""
+
+if(number.length === 3){
+createField(number,"สามตัวตรง")
+createField(number,"สามตัวโต๊ด")
+createField(number,"สามตัวล่าง")
+
+createButton("3 กลับ", ()=>reverse3(number))
+createButton("6 กลับ", ()=>reverse6(number))
+createButton("วิ่งบน", ()=>runTop(number))
+createButton("วิ่งล่าง", ()=>runBottom(number))
+
+}else{
+
+createField(number,"สองตัวบน")
+createField(number,"สองตัวล่าง")
+
+}
+
+numberInput.value=""
 }
 
 function createField(number,type){
-let input = document.createElement("input");
-input.placeholder = type;
-input.type="number";
-input.addEventListener("keydown",function(e){
+
+let input = document.createElement("input")
+input.placeholder = type
+input.type = "number"
+
+input.addEventListener("keyup", function(e){
 if(e.key==="Enter"){
-addData(number,type,this.value);
-this.value="";
+if(this.value>0){
+addData(number,type,this.value)
+this.value=""
 }
-});
-document.getElementById("priceFields").appendChild(input);
+}
+})
+
+document.getElementById("priceFields").appendChild(input)
+input.focus()
 }
 
 function createButton(text,action){
-let btn=document.createElement("button");
-btn.innerText=text;
-btn.onclick=action;
-document.getElementById("priceFields").appendChild(btn);
+let btn = document.createElement("button")
+btn.innerText = text
+btn.onclick = action
+document.getElementById("priceFields").appendChild(btn)
 }
 
 function addData(number,type,price){
-if(price==""||price<=0)return;
-data.push({number,type,price:parseFloat(price)});
-updateTable();
-updateSummary();
+data.push({
+number:number,
+type:type,
+price:parseFloat(price)
+})
+updateTable()
+updateSummary()
 }
 
 function updateTable(){
-let table=document.getElementById("dataTable");
-table.innerHTML="<tr><th>เลข</th><th>ประเภท</th><th>ยอดซื้อ</th></tr>";
+let table=document.getElementById("dataTable")
+table.innerHTML="<tr><th>เลข</th><th>ประเภท</th><th>ยอดซื้อ</th></tr>"
 data.forEach(d=>{
-table.innerHTML+=`<tr><td>${d.number}</td><td>${d.type}</td><td>${d.price}</td></tr>`;
-});
+table.innerHTML+=`<tr>
+<td>${d.number}</td>
+<td>${d.type}</td>
+<td>${d.price}</td>
+</tr>`
+})
 }
 
 function updateSummary(){
-let summary={};
+let summary={}
 data.forEach(d=>{
-let key=d.number+" "+d.type;
-if(!summary[key]) summary[key]=0;
-summary[key]+=d.price;
-});
-let html="";
+let key=d.number+" "+d.type
+if(!summary[key]) summary[key]=0
+summary[key]+=d.price
+})
+
+let html=""
 for(let k in summary){
-html+=`${k} รวมยอดซื้อ ${summary[k]} บาท<br>`;
+html+=`${k} รวมยอดซื้อ ${summary[k]} บาท<br>`
 }
-document.getElementById("summary").innerHTML=html;
+document.getElementById("summary").innerHTML=html
 }
 
 function exportExcel(){
-let ws = XLSX.utils.json_to_sheet(data);
-let wb = XLSX.utils.book_new();
-XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-XLSX.writeFile(wb, "สรุปบิล.xlsx");
+let ws=XLSX.utils.json_to_sheet(data)
+let wb=XLSX.utils.book_new()
+XLSX.utils.book_append_sheet(wb,ws,"บิลหวย")
+XLSX.writeFile(wb,"สรุปบิลหวย.xlsx")
 }
 
 /* ฟังก์ชันปุ่มพิเศษ */
-function back3(num){
-let perms = [num[1]+num[0]+num[2],num[2]+num[1]+num[0]];
-perms.forEach(n=>addData(n,"3 กลับ",0));
+
+function reverse3(num){
+let a=num[0],b=num[1],c=num[2]
+let arr=[b+a+c,c+b+a]
+arr.forEach(n=>{
+addData(n,"สามตัวกลับ",0)
+})
 }
-function back6(num){
-let arr=num.split("");
-let perms=[];
+
+function reverse6(num){
+let results=[]
+let chars=num.split("")
 for(let i=0;i<6;i++){
-perms.push(arr.sort(()=>0.5-Math.random()).join(""));
+results.push(chars.sort(()=>0.5-Math.random()).join(""))
 }
-perms.forEach(n=>addData(n,"6 กลับ",0));
+results.forEach(n=>{
+addData(n,"หกกลับ",0)
+})
 }
+
 function runTop(num){
 for(let i=0;i<=9;i++){
-addData(i+num[1],"วิ่งบน",0);
+addData(i+num[1],"วิ่งบน",0)
 }
 }
+
 function runBottom(num){
 for(let i=0;i<=9;i++){
-addData(num[0]+i,"วิ่งล่าง",0);
+addData(num[0]+i,"วิ่งล่าง",0)
 }
+
 }
+
 </script>
 
 </body>
