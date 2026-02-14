@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ระบบสรุปบิล</title>
+<style>
+body{font-family:sans-serif;padding:20px;}
+textarea{width:100%;height:200px;}
+button{padding:10px 20px;margin-top:10px;}
+.result{margin-top:20px;background:#f4f4f4;padding:15px;}
+</style>
+</head>
+<body>
+
+<h2>ระบบสรุปบิลลูกค้า</h2>
+
+<p>ใส่ข้อมูลแบบนี้:</p>
+<pre>
+863 3ตรง 100
+863 3ตรง 74
+863 โต๊ด 50
+63 2บน 2500
+</pre>
+
+<textarea id="input"></textarea>
+<br>
+<button onclick="calculate()">สรุปผล</button>
+
+<div class="result" id="output"></div>
+
+<script>
+function calculate(){
+let text=document.getElementById("input").value.trim().split("\n");
+let summary={};
+
+text.forEach(line=>{
+let parts=line.split(" ");
+if(parts.length<3)return;
+let key=parts[0]+" "+parts[1];
+let amount=parseInt(parts[2]);
+if(!summary[key])summary[key]=0;
+summary[key]+=amount;
+});
+
+let result="";
+for(let key in summary){
+result+=key+" รวมยอดซื้อ "+summary[key]+" บาท<br>";
+}
+
+document.getElementById("output").innerHTML=result;
+}
+</script>
+
+</body>
+</html>
